@@ -21,7 +21,11 @@ except ImportError:
         bits = random.getrandbits(160)
         return sha.new(str(bits)).hexdigest()
 
-import urllib, re, os, mimetypes
+import mimetypes
+import os
+import re
+import urllib
+
 try:
     from email.header import Header
 except ImportError:
@@ -34,16 +38,27 @@ def encode_and_quote(data):
     if data is None:
         return None
 
-    if isinstance(data, unicode):
+    try:
+        is_unicode = isinstance(data, unicode)
+    except NameError:
+        is_unicode = isinstance(data, str)
+    if is_unicode:
         data = data.encode("utf-8")
-    return urllib.quote_plus(data)
+    try:
+        return urllib.quote_plus(data)
+    except AttributeError:
+        return urllib.parse.quote(data)
 
 def _strify(s):
     """If s is a unicode string, encode it to UTF-8 and return the results,
     otherwise return str(s), or None if s is None"""
     if s is None:
         return None
-    if isinstance(s, unicode):
+    try:
+        is_unicode = isinstance(s, unicode)
+    except NameError:
+        is_unicode = isinstance(s, str)
+    if is_unicode:
         return s.encode("utf-8")
     return str(s)
 
@@ -86,13 +101,20 @@ class MultipartParam(object):
         if filename is None:
             self.filename = None
         else:
-            if isinstance(filename, unicode):
+            try:
+                is_unicode = isinstance(filename, unicode)
+            except NameError:
+                is_unicode = isinstance(filename, str)
+            if is_unicode:
                 # Encode with XML entities
                 self.filename = filename.encode("ascii", "xmlcharrefreplace")
-            else:
+            self.filename = str(filename)
+            try:
+                self.filename = self.filename.encode("string_escape")
+            except LookupError:
+                self.filename = self.filename.encode('unicode_escape')
                 self.filename = str(filename)
-            self.filename = self.filename.encode("string_escape").\
-                    replace('"', '\\"')
+            self.filename = self.filename.replace('"', '\\"')
         self.filetype = _strify(filetype)
 
         self.filesize = filesize
@@ -306,7 +328,10 @@ def get_headers(params, boundary):
     """Returns a dictionary with Content-Type and Content-Length headers
     for the multipart/form-data encoding of ``params``."""
     headers = {}
-    boundary = urllib.quote_plus(boundary)
+    try:
+        boundary = urllib.quote_plus(boundary)
+    except AttributeError:
+        boundary = urllib.parse.quote(boundary)
     headers['Content-Type'] = "multipart/form-data; boundary=%s" % boundary
     headers['Content-Length'] = str(get_body_size(params, boundary))
     return headers
@@ -406,7 +431,10 @@ def multipart_encode(params, boundary=None, cb=None):
     if boundary is None:
         boundary = gen_boundary()
     else:
-        boundary = urllib.quote_plus(boundary)
+        try:
+            boundary = urllib.quote_plus(boundary)
+        except AttributeError:
+            boundary = urllib.parse.quote(boundary)
 
     headers = get_headers(params, boundary)
     params = MultipartParam.from_params(params)

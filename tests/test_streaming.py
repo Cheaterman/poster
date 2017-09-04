@@ -45,12 +45,10 @@ class TestStreaming(TestCase):
                     time.sleep(0.1)
                     break
                 except:
-                    #import traceback
-                    #traceback.print_exc()
                     time.sleep(0.1)
             else:
                 self.server_output.seek(0)
-                print self.server_output.read()
+                print(self.server_output.read())
                 raise OSError("Error starting server")
         except:
             if self.server_proc:
@@ -65,7 +63,7 @@ class TestStreaming(TestCase):
         os.kill(self.server_proc.pid, signal.SIGINT)
         self.server_proc.wait()
         self.server_output.seek(0)
-        print self.server_output.read()
+        print(self.server_output.read())
 
     def _open(self, url, params=None, headers=None):
         try:
